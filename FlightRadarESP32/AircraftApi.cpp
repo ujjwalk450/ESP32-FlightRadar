@@ -4,6 +4,7 @@
 #include "AircraftStore.h"
 #include "TextUtils.h"
 #include "RadarRenderer.h"
+#include "OperatorLookup.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <WiFiClientSecure.h>
@@ -102,6 +103,7 @@ static bool httpGetJson(const char *url, DynamicJsonDocument &doc) {
   client.setInsecure();
   client.setTimeout(15000);
   client.setHandshakeTimeout(15000);
+
   HTTPClient http;
   http.setTimeout(15000);
   http.setConnectTimeout(15000);
@@ -117,6 +119,7 @@ static bool httpGetJson(const char *url, DynamicJsonDocument &doc) {
 
   http.addHeader("User-Agent", "ESP32-FlightRadar/1.0");
   http.addHeader("Accept", "application/json");
+  http.addHeader("Accept-Encoding", "identity");
   http.addHeader("Connection", "close");
 
   int code = http.GET();
@@ -148,9 +151,29 @@ static bool httpGetJson(const char *url, DynamicJsonDocument &doc) {
     return false;
   }
 
-  doc.clear();
-  DeserializationError error = deserializeJson(doc, http.getStream());
+  String payload = http.getString();
   http.end();
+
+#if DEBUG_SERIAL
+  Serial.print("Payload bytes: ");
+  Serial.println(payload.length());
+  if (payload.length() > 0) {
+    Serial.print("Payload head: ");
+    Serial.println(payload.substring(0, min((unsigned int)80, (unsigned int)payload.length())));
+  }
+#endif
+
+  if (payload.length() < 2) {
+#if DEBUG_SERIAL
+    Serial.println("Payload too short");
+#endif
+    return false;
+  }
+
+  doc.clear();
+  DeserializationError error = deserializeJson(doc, payload);
+
+  payload = String();
 
   if (error) {
 #if DEBUG_SERIAL
@@ -207,11 +230,15 @@ bool fetchADSB() {
           float lat = item["lat"].as<float>();
           float lon = item["lon"].as<float>();
 
-          char icao[9], callsign[12], model[22], routeFrom[6], routeTo[6];
+          char icao[9], callsign[12], registration[12], typeCode[8], model[22], operatorName[18], operatorCountry[18], routeFrom[6], routeTo[6];
 
           safeCopy(icao, sizeof(icao), item["hex"] | "");
           safeCopy(callsign, sizeof(callsign), firstJsonText(item, "flight", "call", "callsign", "squawk"));
-          buildModelText(item, model, sizeof(model));
+          safeCopy(registration, sizeof(registration), firstJsonText(item, "r", "reg", "registration", "tail"));
+          safeCopy(typeCode, sizeof(typeCode), firstJsonText(item, "t", "type", "aircraft_type", "typeDesignator"));
+          friendlyTypeFromCode(typeCode, model, sizeof(model));
+          if (textIsEmpty(model)) buildModelText(item, model, sizeof(model));
+          inferOperatorFromCallsign(callsign, operatorName, sizeof(operatorName), operatorCountry, sizeof(operatorCountry));
 
           safeCopy(routeFrom, sizeof(routeFrom), firstJsonText(item, "from", "origin", "orig_iata", "orig_icao"));
           safeCopy(routeTo, sizeof(routeTo), firstJsonText(item, "to", "destination", "dest_iata", "dest_icao"));
@@ -243,7 +270,7 @@ bool fetchADSB() {
           if (!item["alt_baro"].isNull() && item["alt_baro"].is<int>()) altitude = item["alt_baro"].as<int>();
           else if (!item["alt_geom"].isNull() && item["alt_geom"].is<int>()) altitude = item["alt_geom"].as<int>();
 
-          if (fillAircraft(fetchAircraft[count], icao, callsign, model, routeFrom, routeTo, lat, lon, heading, speed, altitude)) {
+          if (fillAircraft(fetchAircraft[count], icao, callsign, registration, typeCode, model, operatorName, operatorCountry, routeFrom, routeTo, lat, lon, heading, speed, altitude)) {
             count++;
           }
         }
@@ -321,10 +348,14 @@ bool fetchOpenSky() {
           if (s.size() < 17) continue;
           if (s[5].isNull() || s[6].isNull()) continue;
 
-          char icao[9], callsign[12];
+          char icao[9], callsign[12], operatorName[18], operatorCountry[18];
 
           safeCopy(icao, sizeof(icao), s[0] | "");
           safeCopy(callsign, sizeof(callsign), s[1] | "");
+          inferOperatorFromCallsign(callsign, operatorName, sizeof(operatorName), operatorCountry, sizeof(operatorCountry));
+          if (textIsEmpty(operatorCountry) && s.size() > 2 && !s[2].isNull()) {
+            safeCopy(operatorCountry, sizeof(operatorCountry), s[2] | "");
+          }
 
           float lon = s[5].as<float>();
           float lat = s[6].as<float>();
@@ -341,7 +372,7 @@ bool fetchOpenSky() {
           if (!s[7].isNull()) altitudeFt = (int)(s[7].as<float>() * 3.28084f);
           else if (!s[13].isNull()) altitudeFt = (int)(s[13].as<float>() * 3.28084f);
 
-          if (fillAircraft(fetchAircraft[count], icao, callsign, "", "--", "--", lat, lon, heading, speedKts, altitudeFt)) {
+          if (fillAircraft(fetchAircraft[count], icao, callsign, "", "", "", operatorName, operatorCountry, "--", "--", lat, lon, heading, speedKts, altitudeFt)) {
             count++;
           }
         }

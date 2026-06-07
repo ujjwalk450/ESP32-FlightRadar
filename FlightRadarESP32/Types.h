@@ -35,7 +35,11 @@ struct TrailPoint {
 struct Aircraft {
   char icao[9];
   char callsign[12];
+  char registration[12];
+  char typeCode[8];
   char model[22];
+  char operatorName[18];
+  char operatorCountry[18];
   char routeFrom[6];
   char routeTo[6];
 

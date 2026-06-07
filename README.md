@@ -222,3 +222,19 @@ If using PSRAM, keep the sprite 8-bit unless you know you have enough memory for
 - PlatformIO support
 - Better true moon azimuth/elevation calculation
 - More display themes
+
+## Aircraft type and operator display
+
+This build extracts extra aircraft metadata from ADSB.lol when available:
+
+- `t` is stored as the aircraft type code, for example `A20N`, `A21N`, `B38M`, `B752`.
+- `r` is stored as the aircraft registration, for example `VT-TQQ` or `9K-AQA`.
+- Common callsign prefixes are mapped locally to operator names, for example `IGO` → `INDIGO`, `AIC` → `AIR INDIA`, `KAC` → `KUWAIT AIR`.
+
+OpenSky fallback does not provide aircraft type or registration in the normal states API response, but it does provide `origin_country`, which is displayed when ADSB.lol is not available.
+
+To add more airline/operator mappings, edit:
+
+```text
+FlightRadarESP32/OperatorLookup.cpp
+```

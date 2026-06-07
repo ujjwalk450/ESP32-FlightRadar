@@ -477,20 +477,44 @@ static void drawSelectedAircraftInfo() {
   bool showFlightTemplate = ((millis() / INFO_TEMPLATE_INTERVAL_MS) % 2) == 0;
   int visibleRank = visibleRankForIndex(renderSelectedIndex);
   if (showFlightTemplate) {
-    char line1[20], line2[28], line3[18];
+    char line1[20], line2[32], line3[24];
+
     snprintf(line1, sizeof(line1), "%s", a.callsign);
-    if (hasUsefulText(a.routeFrom) && hasUsefulText(a.routeTo)) snprintf(line2, sizeof(line2), "%s - %s", a.routeFrom, a.routeTo);
-    else snprintf(line2, sizeof(line2), "%s %.1fkm", a.icao, a.distanceKm);
-    snprintf(line3, sizeof(line3), "%d/%d", visibleRank, renderVisibleAircraftCount);
+
+    if (hasUsefulText(a.operatorName) && hasUsefulText(a.typeCode)) {
+      snprintf(line2, sizeof(line2), "%s / %s", a.operatorName, a.typeCode);
+    } else if (hasUsefulText(a.operatorCountry) && hasUsefulText(a.typeCode)) {
+      snprintf(line2, sizeof(line2), "%s / %s", a.operatorCountry, a.typeCode);
+    } else if (hasUsefulText(a.operatorName)) {
+      snprintf(line2, sizeof(line2), "%s", a.operatorName);
+    } else if (hasUsefulText(a.typeCode)) {
+      snprintf(line2, sizeof(line2), "%s", a.typeCode);
+    } else {
+      snprintf(line2, sizeof(line2), "%s %.1fkm", a.icao, a.distanceKm);
+    }
+
+    if (hasUsefulText(a.registration)) {
+      snprintf(line3, sizeof(line3), "%s  %d/%d", a.registration, visibleRank, renderVisibleAircraftCount);
+    } else {
+      snprintf(line3, sizeof(line3), "%d/%d", visibleRank, renderVisibleAircraftCount);
+    }
+
     sprite.setTextColor(C_ACTIVE); sprite.drawString(line1, INFO_CX, INFO_Y1, 2);
     sprite.setTextColor(C_TEXT); sprite.drawString(line2, INFO_CX, INFO_Y2, 2);
     sprite.setTextColor(C_INFO_TEXT_DIM); sprite.drawString(line3, INFO_CX, INFO_Y3, 1);
   } else {
-    char altText[12], bestName[24], line2[34], line3[30];
+    char altText[12], bestName[24], line2[34], line3[34];
     formatAltitudeShort(a.altitudeFt, altText, sizeof(altText));
     getBestAircraftDisplayName(a, bestName, sizeof(bestName));
+
     snprintf(line2, sizeof(line2), "%.1fkm  %s", a.distanceKm, altText);
-    snprintf(line3, sizeof(line3), "%.0fkt  HDG %.0f", a.speedKts, a.headingDeg);
+
+    if (hasUsefulText(a.registration) && a.registration[0] != '-') {
+      snprintf(line3, sizeof(line3), "%s  %.0fkt", a.registration, a.speedKts);
+    } else {
+      snprintf(line3, sizeof(line3), "%.0fkt  HDG %.0f", a.speedKts, a.headingDeg);
+    }
+
     sprite.setTextColor(C_ACTIVE); sprite.drawString(bestName, INFO_CX, INFO_Y1, 2);
     sprite.setTextColor(C_TEXT); sprite.drawString(line2, INFO_CX, INFO_Y2, 2);
     sprite.setTextColor(C_INFO_TEXT_DIM); sprite.drawString(line3, INFO_CX, INFO_Y3, 1);

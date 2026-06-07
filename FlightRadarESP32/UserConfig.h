@@ -42,7 +42,7 @@ static const float DEFAULT_LOCAL_TIMEZONE_HOURS = 5.5f;
 //====================================================
 // DEBUG
 //====================================================
-#define DEBUG_SERIAL 1
+#define DEBUG_SERIAL 0
 
 //====================================================
 // CONSTELLATION DISPLAY
@@ -53,7 +53,7 @@ static const float DEFAULT_LOCAL_TIMEZONE_HOURS = 5.5f;
 
 // Default is ALWAYS so users can immediately verify the layer works.
 // Change to CONSTELLATION_AUTO_NIGHT if you only want it after local sunset.
-#define CONSTELLATION_MODE CONSTELLATION_ALWAYS
+#define CONSTELLATION_MODE CONSTELLATION_AUTO_NIGHT
 
 
 //====================================================

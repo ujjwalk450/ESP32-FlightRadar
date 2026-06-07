@@ -10,7 +10,11 @@ void clearAircraft(Aircraft &a) {
   a.valid = false;
   a.trailHead = 0;
   a.trailCount = 0;
+  safeCopy(a.registration, sizeof(a.registration), "");
+  safeCopy(a.typeCode, sizeof(a.typeCode), "");
   safeCopy(a.model, sizeof(a.model), "");
+  safeCopy(a.operatorName, sizeof(a.operatorName), "");
+  safeCopy(a.operatorCountry, sizeof(a.operatorCountry), "");
   safeCopy(a.routeFrom, sizeof(a.routeFrom), "--");
   safeCopy(a.routeTo, sizeof(a.routeTo), "--");
   for (int i = 0; i < MAX_TRAIL_POINTS; i++) a.trail[i].valid = false;
@@ -98,6 +102,8 @@ int visibleRankForIndex(int targetIndex) {
 void getBestAircraftDisplayName(const Aircraft &a, char *out, size_t outSize) {
   if (!out || outSize == 0) return;
   if (hasUsefulText(a.model)) safeCopy(out, outSize, a.model);
+  else if (hasUsefulText(a.typeCode)) safeCopy(out, outSize, a.typeCode);
+  else if (hasUsefulText(a.registration)) safeCopy(out, outSize, a.registration);
   else if (hasUsefulText(a.callsign)) safeCopy(out, outSize, a.callsign);
   else if (hasUsefulText(a.icao)) safeCopy(out, outSize, a.icao);
   else safeCopy(out, outSize, "AIRCRAFT");
@@ -129,20 +135,51 @@ void addTrailPointLocked(Aircraft &a) {
   if (a.trailCount < MAX_TRAIL_POINTS) a.trailCount++;
 }
 
-bool fillAircraft(Aircraft &a, const char *icao, const char *callsign, const char *model, const char *routeFrom, const char *routeTo, float lat, float lon, float headingDeg, float speedKts, int altitudeFt) {
+bool fillAircraft(
+  Aircraft &a,
+  const char *icao,
+  const char *callsign,
+  const char *registration,
+  const char *typeCode,
+  const char *model,
+  const char *operatorName,
+  const char *operatorCountry,
+  const char *routeFrom,
+  const char *routeTo,
+  float lat,
+  float lon,
+  float headingDeg,
+  float speedKts,
+  int altitudeFt
+) {
   if (lat < -90.0f || lat > 90.0f || lon < -180.0f || lon > 180.0f) return false;
   clearAircraft(a);
   safeCopy(a.icao, sizeof(a.icao), icao);
   safeCopy(a.callsign, sizeof(a.callsign), callsign);
+  safeCopy(a.registration, sizeof(a.registration), registration);
+  safeCopy(a.typeCode, sizeof(a.typeCode), typeCode);
   safeCopy(a.model, sizeof(a.model), model);
+  safeCopy(a.operatorName, sizeof(a.operatorName), operatorName);
+  safeCopy(a.operatorCountry, sizeof(a.operatorCountry), operatorCountry);
   safeCopy(a.routeFrom, sizeof(a.routeFrom), routeFrom);
   safeCopy(a.routeTo, sizeof(a.routeTo), routeTo);
-  trimText(a.icao); trimText(a.callsign); trimText(a.model); trimText(a.routeFrom); trimText(a.routeTo);
-  uppercaseText(a.icao); uppercaseText(a.callsign); uppercaseText(a.model); uppercaseText(a.routeFrom); uppercaseText(a.routeTo);
+
+  trimText(a.icao); trimText(a.callsign); trimText(a.registration); trimText(a.typeCode); trimText(a.model);
+  trimText(a.operatorName); trimText(a.operatorCountry); trimText(a.routeFrom); trimText(a.routeTo);
+
+  uppercaseText(a.icao); uppercaseText(a.callsign); uppercaseText(a.registration); uppercaseText(a.typeCode);
+  uppercaseText(a.operatorName); uppercaseText(a.operatorCountry); uppercaseText(a.routeFrom); uppercaseText(a.routeTo);
+
   if (textIsEmpty(a.icao)) safeCopy(a.icao, sizeof(a.icao), "UNKNOWN");
   if (textIsEmpty(a.callsign)) safeCopy(a.callsign, sizeof(a.callsign), "NO CALL");
+  if (textIsEmpty(a.registration)) safeCopy(a.registration, sizeof(a.registration), "--");
+  if (textIsEmpty(a.typeCode)) safeCopy(a.typeCode, sizeof(a.typeCode), "--");
+  if (textIsEmpty(a.model)) safeCopy(a.model, sizeof(a.model), a.typeCode);
+  if (textIsEmpty(a.operatorName)) safeCopy(a.operatorName, sizeof(a.operatorName), "--");
+  if (textIsEmpty(a.operatorCountry)) safeCopy(a.operatorCountry, sizeof(a.operatorCountry), "--");
   if (textIsEmpty(a.routeFrom)) safeCopy(a.routeFrom, sizeof(a.routeFrom), "--");
   if (textIsEmpty(a.routeTo)) safeCopy(a.routeTo, sizeof(a.routeTo), "--");
+
   a.lat = lat;
   a.lon = lon;
   a.headingDeg = normalizeAngle(headingDeg);
